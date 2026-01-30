@@ -1,0 +1,19 @@
+rules:
+- id: ea9f25d1
+  symbol: AAPL
+  action: buy
+  condition: below
+  target_price: '240.0'
+  quantity: 5
+  enabled: true
+  triggered: false
+  description: null
+- id: 818e30c8
+  symbol: TSLA
+  action: sell
+  condition: above
+  target_price: '350.0'
+  quantity: 3
+  enabled: true
+  triggered: false
+  description: null
