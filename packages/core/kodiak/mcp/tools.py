@@ -1113,6 +1113,81 @@ def run_workflow(
     return _ok(result.to_dict())
 
 
+def validate_workflow_spec(spec: str) -> str:
+    """Validate a YAML or JSON workflow spec without executing it.
+
+    Returns a validation report listing any errors found in the spec.
+    An empty errors list means the spec is ready to run.
+
+    Args:
+        spec: YAML or JSON string containing the workflow spec.
+
+    Spec formats accepted:
+
+        Full form (named steps with inputs)::
+
+            name: my-workflow
+            steps:
+              - primitive: get_quote
+                inputs:
+                  symbol: AAPL
+              - primitive: get_balance
+
+        Short form (bare primitive names)::
+
+            name: portfolio-check
+            steps:
+              - get_balance
+              - get_positions
+
+        Compact form (workflow name as top-level key)::
+
+            portfolio_check:
+              - get_balance
+              - get_positions
+    """
+    from kodiak.orchestration import WorkflowSpec, WorkflowSpecError  # noqa: PLC0415
+
+    try:
+        workflow_spec = WorkflowSpec.from_yaml(spec)
+    except WorkflowSpecError:
+        try:
+            workflow_spec = WorkflowSpec.from_json(spec)
+        except WorkflowSpecError as exc:
+            return _ok({"valid": False, "errors": [str(exc)]})
+
+    errors = workflow_spec.validate()
+    return _ok({"valid": len(errors) == 0, "errors": errors})
+
+
+def run_workflow_spec(spec: str) -> str:
+    """Parse, validate, and execute a YAML or JSON workflow spec.
+
+    Combines spec parsing, validation, plan compilation, and execution
+    into a single call. If validation fails, returns errors without executing.
+
+    Args:
+        spec: YAML or JSON workflow spec string (same format as validate_workflow_spec).
+    """
+    from kodiak.orchestration import WorkflowExecutor, WorkflowSpec, WorkflowSpecError  # noqa: PLC0415
+
+    try:
+        workflow_spec = WorkflowSpec.from_yaml(spec)
+    except WorkflowSpecError:
+        try:
+            workflow_spec = WorkflowSpec.from_json(spec)
+        except WorkflowSpecError as exc:
+            return _ok({"valid": False, "errors": [str(exc)], "result": None})
+
+    errors = workflow_spec.validate()
+    if errors:
+        return _ok({"valid": False, "errors": errors, "result": None})
+
+    plan = workflow_spec.compile()
+    result = WorkflowExecutor().execute(plan)
+    return _ok({"valid": True, "errors": [], "result": result.to_dict()})
+
+
 # =============================================================================
 # Primitives Discovery Tools
 # =============================================================================
@@ -1208,6 +1283,8 @@ _ALL_TOOLS = [
     describe_primitive,
     # Orchestration
     run_workflow,
+    validate_workflow_spec,
+    run_workflow_spec,
 ]
 
 

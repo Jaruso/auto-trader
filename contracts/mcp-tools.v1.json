@@ -1,7 +1,7 @@
 {
   "contract_version": "v1",
   "server": "kodiak",
-  "tool_count": 42,
+  "tool_count": 44,
   "tools": [
     {
       "description": "Analyze realized trade performance (win rate, profit factor, etc.).\n\nArgs:\n    symbol: Filter by ticker. If omitted, analyzes all trades.\n    days: Number of days to look back.\n    limit: Maximum number of trades to analyze.\n",
@@ -1635,6 +1635,36 @@
       }
     },
     {
+      "description": "Parse, validate, and execute a YAML or JSON workflow spec.\n\nCombines spec parsing, validation, plan compilation, and execution\ninto a single call. If validation fails, returns errors without executing.\n\nArgs:\n    spec: YAML or JSON workflow spec string (same format as validate_workflow_spec).\n",
+      "inputSchema": {
+        "properties": {
+          "spec": {
+            "title": "Spec",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "title": "run_workflow_specArguments",
+        "type": "object"
+      },
+      "name": "run_workflow_spec",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "run_workflow_specOutput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Schedule a strategy to start at a specific time.\n\nThe strategy will be disabled until the schedule time arrives.\nOnce the time arrives, the engine will automatically enable it.\n\nArgs:\n    strategy_id: The strategy ID to schedule.\n    schedule_at: ISO datetime string (e.g., \"2026-02-13T09:30:00\").\n",
       "inputSchema": {
         "properties": {
@@ -1802,6 +1832,36 @@
           "result"
         ],
         "title": "stop_engineOutput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Validate a YAML or JSON workflow spec without executing it.\n\nReturns a validation report listing any errors found in the spec.\nAn empty errors list means the spec is ready to run.\n\nArgs:\n    spec: YAML or JSON string containing the workflow spec.\n\nSpec formats accepted:\n\n    Full form (named steps with inputs)::\n\n        name: my-workflow\n        steps:\n          - primitive: get_quote\n            inputs:\n              symbol: AAPL\n          - primitive: get_balance\n\n    Short form (bare primitive names)::\n\n        name: portfolio-check\n        steps:\n          - get_balance\n          - get_positions\n\n    Compact form (workflow name as top-level key)::\n\n        portfolio_check:\n          - get_balance\n          - get_positions\n",
+      "inputSchema": {
+        "properties": {
+          "spec": {
+            "title": "Spec",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "title": "validate_workflow_specArguments",
+        "type": "object"
+      },
+      "name": "validate_workflow_spec",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "validate_workflow_specOutput",
         "type": "object"
       }
     }

@@ -1,0 +1,19 @@
+# market-check.yaml
+# Fetch a live quote and check portfolio balance before deciding to trade.
+# All steps are read-only — safe for high-frequency agent polling.
+#
+# Run:
+#   kodiak workflow run-file examples/workflows/market-check.yaml
+#   kodiak workflow validate examples/workflows/market-check.yaml
+
+name: market-check
+deterministic: true
+
+steps:
+  - primitive: get_quote
+    inputs:
+      symbol: AAPL
+
+  - primitive: get_balance
+
+  - primitive: get_positions

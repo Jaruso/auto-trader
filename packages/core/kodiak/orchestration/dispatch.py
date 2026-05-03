@@ -21,17 +21,14 @@ _initialized = False
 
 
 def _build_dispatch() -> None:
-    """Populate dispatch table from MCP tool functions by name matching."""
+    """Populate dispatch table from all MCP tool functions."""
     global _initialized
     if _initialized:
         return
-    from kodiak.mcp import tools as _tools
-    from kodiak.primitives import list_all
+    from kodiak.mcp.tools import _ALL_TOOLS
 
-    for primitive in list_all():
-        fn = getattr(_tools, primitive.name, None)
-        if fn is not None and callable(fn):
-            _DISPATCH[primitive.name] = fn
+    for fn in _ALL_TOOLS:
+        _DISPATCH[fn.__name__] = fn
 
     _initialized = True
 

@@ -3132,6 +3132,123 @@ def primitives_describe(ctx: click.Context, name: str, ver: str) -> None:
 
 
 # =============================================================================
+# Workflow DSL Commands
+# =============================================================================
+
+
+@cli.group()
+def workflow() -> None:
+    """Validate and run declarative YAML/JSON workflow specs."""
+    pass
+
+
+@workflow.command("validate")
+@click.argument("spec_file", type=click.Path(exists=True))
+@click.pass_context
+def workflow_validate(ctx: click.Context, spec_file: str) -> None:
+    """Validate a workflow spec file without executing it."""
+    from kodiak.orchestration import WorkflowSpec, WorkflowSpecError
+
+    as_json = _get_json_flag(ctx)
+
+    try:
+        spec = WorkflowSpec.from_file(spec_file)
+    except WorkflowSpecError as exc:
+        if as_json:
+            _json_output({"valid": False, "errors": [str(exc)]})
+        else:
+            console.print(f"[red]Parse error:[/red] {exc}")
+        raise SystemExit(1)
+
+    errors = spec.validate()
+    if as_json:
+        _json_output({"valid": len(errors) == 0, "errors": errors})
+        return
+
+    if errors:
+        console.print(f"[red]Validation failed ({len(errors)} error(s)):[/red]")
+        for err in errors:
+            console.print(f"  [red]•[/red] {err}")
+        raise SystemExit(1)
+
+    try:
+        plan = spec.compile()
+        console.print(
+            f"[green]✓[/green] Valid — '{plan.name}' "
+            f"({len(plan.steps)} step(s), deterministic={plan.deterministic})"
+        )
+    except WorkflowSpecError as exc:
+        console.print(f"[red]Compile error:[/red] {exc}")
+        raise SystemExit(1)
+
+
+@workflow.command("run-file")
+@click.argument("spec_file", type=click.Path(exists=True))
+@click.pass_context
+def workflow_run_file(ctx: click.Context, spec_file: str) -> None:
+    """Parse, validate, and execute a workflow spec file."""
+    from kodiak.orchestration import WorkflowExecutor, WorkflowSpec, WorkflowSpecError
+
+    as_json = _get_json_flag(ctx)
+
+    try:
+        spec = WorkflowSpec.from_file(spec_file)
+    except WorkflowSpecError as exc:
+        if as_json:
+            _json_output({"valid": False, "errors": [str(exc)], "result": None})
+        else:
+            console.print(f"[red]Parse error:[/red] {exc}")
+        raise SystemExit(1)
+
+    errors = spec.validate()
+    if errors:
+        if as_json:
+            _json_output({"valid": False, "errors": errors, "result": None})
+        else:
+            console.print(f"[red]Validation failed ({len(errors)} error(s)):[/red]")
+            for err in errors:
+                console.print(f"  [red]•[/red] {err}")
+        raise SystemExit(1)
+
+    plan = spec.compile()
+    if not as_json:
+        console.print(f"[cyan]Running workflow:[/cyan] {plan.name} ({len(plan.steps)} steps)")
+
+    result = WorkflowExecutor().execute(plan)
+
+    if as_json:
+        _json_output({"valid": True, "errors": [], "result": result.to_dict()})
+        return
+
+    status = "[green]✓ success[/green]" if result.success else "[red]✗ failed[/red]"
+    console.print(f"Result: {status} — {result.steps_completed}/{result.steps_total} steps completed")
+
+    table = Table(title="Step Results", show_lines=True)
+    table.add_column("#", style="dim")
+    table.add_column("Primitive", style="cyan")
+    table.add_column("Version")
+    table.add_column("Status")
+    table.add_column("Attempts")
+    table.add_column("ms")
+    table.add_column("Error")
+    for sr in result.step_results:
+        ok = "[green]ok[/green]" if sr.success else "[red]fail[/red]"
+        table.add_row(
+            str(sr.step_index),
+            sr.primitive,
+            sr.version_resolved,
+            ok,
+            str(sr.attempts),
+            f"{sr.duration_ms:.1f}",
+            sr.error or "",
+        )
+    console.print(table)
+
+    if not result.success:
+        raise SystemExit(1)
+
+
+# =============================================================================
 # MCP Server Commands
 # =============================================================================
 

@@ -541,6 +541,20 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "WorkflowSpecRequest": {
+        "properties": {
+          "spec": {
+            "description": "YAML or JSON workflow spec string.",
+            "title": "Spec",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spec"
+        ],
+        "title": "WorkflowSpecRequest",
+        "type": "object"
       }
     }
   },
@@ -1832,6 +1846,94 @@
           }
         },
         "summary": "Run Workflow",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflows/run-spec": {
+      "post": {
+        "description": "Parse, validate, and execute a YAML or JSON workflow spec.\n\nIf validation fails, returns errors without executing.",
+        "operationId": "run_workflow_spec_v1_workflows_run_spec_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowSpecRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Workflow Spec V1 Workflows Run Spec Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Workflow Spec",
+        "tags": [
+          "workflows"
+        ]
+      }
+    },
+    "/v1/workflows/validate": {
+      "post": {
+        "description": "Validate a YAML or JSON workflow spec without executing it.\n\nReturns a validation report with any errors found. An empty errors list\nmeans the spec is ready to run.",
+        "operationId": "validate_workflow_spec_v1_workflows_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowSpecRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Validate Workflow Spec V1 Workflows Validate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Validate Workflow Spec",
         "tags": [
           "workflows"
         ]

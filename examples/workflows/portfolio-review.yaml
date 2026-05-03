@@ -1,0 +1,16 @@
+# portfolio-review.yaml
+# End-of-day portfolio review: check positions, analytics, and today's P&L.
+# Uses the compact step syntax (bare primitive names — no custom inputs needed).
+#
+# Run:
+#   kodiak workflow run-file examples/workflows/portfolio-review.yaml
+#   kodiak workflow validate examples/workflows/portfolio-review.yaml
+
+name: portfolio-review
+deterministic: true
+
+steps:
+  - get_portfolio
+  - get_positions
+  - get_today_pnl
+  - get_trade_history

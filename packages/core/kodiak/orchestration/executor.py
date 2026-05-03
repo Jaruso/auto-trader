@@ -104,14 +104,8 @@ class WorkflowExecutor:
         )
 
     def _validate_plan(self, plan: WorkflowPlan) -> str | None:
-        """Return an error message if any step references an unknown primitive."""
+        """Return an error message if any step cannot be executed."""
         for idx, step in enumerate(plan.steps):
-            primitive = get_primitive(step.primitive, step.version)
-            if primitive is None:
-                return (
-                    f"Step {idx}: primitive '{step.primitive}' version '{step.version}' "
-                    "is not registered."
-                )
             if not has_executor(step.primitive):
                 return f"Step {idx}: no executor registered for primitive '{step.primitive}'."
         return None

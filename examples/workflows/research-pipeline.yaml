@@ -1,0 +1,32 @@
+# research-pipeline.yaml
+# Full research pipeline: quote → fundamentals → backtest.
+# Runs a backtest for the symbol with a trailing-stop strategy and
+# compares results to a benchmark.
+#
+# Run:
+#   kodiak workflow run-file examples/workflows/research-pipeline.yaml
+#   kodiak workflow validate examples/workflows/research-pipeline.yaml
+
+name: research-pipeline
+deterministic: true
+
+steps:
+  - primitive: get_quote
+    inputs:
+      symbol: AAPL
+
+  - primitive: get_fundamentals
+    inputs:
+      symbol: AAPL
+
+  - primitive: run_backtest
+    inputs:
+      strategy_type: trailing-stop
+      symbols:
+        - AAPL
+      start: "2024-01-01"
+      end: "2024-12-31"
+      trailing_pct: 5.0
+      initial_capital: 50000.0
+      save: false
+    retry_count: 1
