@@ -455,11 +455,16 @@
       }
     },
     {
-      "description": "Get the full descriptor for a single financial action primitive.\n\nArgs:\n    name: Primitive name (e.g. \"get_quote\", \"place_order\", \"run_backtest\").\n",
+      "description": "Get the full descriptor for a single financial action primitive.\n\nArgs:\n    name: Primitive name (e.g. \"get_quote\", \"place_order\", \"run_backtest\").\n    version: Semver string (e.g. \"1.0.0\") or \"latest\" (default).\n",
       "inputSchema": {
         "properties": {
           "name": {
             "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "default": "latest",
+            "title": "Version",
             "type": "string"
           }
         },
@@ -1100,9 +1105,15 @@
       }
     },
     {
-      "description": "List all registered financial action primitives.\n\nReturns name, version, description, risk level, permissions,\nand execution mode for each primitive in the registry.\n",
+      "description": "List all registered financial action primitives (latest version of each).\n\nArgs:\n    include_deprecated: When true, includes deprecated primitive versions\n        in the results. Defaults to false.\n\nReturns name, version, description, risk level, permissions, latency class,\nand execution mode for each primitive in the registry.\n",
       "inputSchema": {
-        "properties": {},
+        "properties": {
+          "include_deprecated": {
+            "default": false,
+            "title": "Include Deprecated",
+            "type": "boolean"
+          }
+        },
         "title": "list_primitivesArguments",
         "type": "object"
       },

@@ -3026,13 +3026,16 @@ def primitives() -> None:
 
 
 @primitives.command("list")
+@click.option("--show-deprecated", is_flag=True, help="Include deprecated primitives")
 @click.pass_context
-def primitives_list(ctx: click.Context) -> None:
-    """List all registered financial action primitives."""
+def primitives_list(ctx: click.Context, show_deprecated: bool) -> None:
+    """List all registered financial action primitives (latest version of each)."""
     from kodiak.primitives import list_all
 
     as_json = _get_json_flag(ctx)
     all_primitives = list_all()
+    if not show_deprecated:
+        all_primitives = [p for p in all_primitives if not p.deprecated]
 
     if as_json:
         _json_output([p.to_dict() for p in all_primitives])
@@ -3042,33 +3045,66 @@ def primitives_list(ctx: click.Context) -> None:
     table.add_column("Name", style="cyan")
     table.add_column("Version")
     table.add_column("Risk", style="yellow")
+    table.add_column("Latency")
     table.add_column("Mode")
-    table.add_column("Permissions")
     table.add_column("Tags")
+    table.add_column("Deprecated")
     for p in all_primitives:
         table.add_row(
             p.name,
             p.version,
             p.risk_level.value,
+            p.latency_class.value if p.latency_class else "—",
             p.execution_mode.value,
-            ", ".join(p.permissions),
             ", ".join(p.tags),
+            "yes" if p.deprecated else "",
+        )
+    console.print(table)
+
+
+@primitives.command("versions")
+@click.argument("name")
+@click.pass_context
+def primitives_versions(ctx: click.Context, name: str) -> None:
+    """List all registered versions of a primitive."""
+    from kodiak.primitives import list_versions
+
+    versions = list_versions(name)
+    if not versions:
+        console.print(f"[red]Primitive '{name}' not found.[/red]")
+        raise SystemExit(1)
+
+    as_json = _get_json_flag(ctx)
+    if as_json:
+        _json_output([p.to_dict() for p in versions])
+        return
+
+    table = Table(title=f"Versions: {name}", show_lines=True)
+    table.add_column("Version", style="cyan")
+    table.add_column("Deprecated")
+    table.add_column("Note")
+    for p in versions:
+        table.add_row(
+            p.version,
+            "yes" if p.deprecated else "",
+            p.deprecation_message or "",
         )
     console.print(table)
 
 
 @primitives.command("describe")
 @click.argument("name")
+@click.option("--version", "ver", default="latest", show_default=True, help="Version or 'latest'")
 @click.pass_context
-def primitives_describe(ctx: click.Context, name: str) -> None:
+def primitives_describe(ctx: click.Context, name: str, ver: str) -> None:
     """Show full descriptor for a primitive including input/output schemas."""
     import json as json_lib
 
     from kodiak.primitives import get
 
-    primitive = get(name)
+    primitive = get(name, version=ver)
     if primitive is None:
-        console.print(f"[red]Primitive '{name}' not found.[/red]")
+        console.print(f"[red]Primitive '{name}' version '{ver}' not found.[/red]")
         raise SystemExit(1)
 
     as_json = _get_json_flag(ctx)
@@ -3076,16 +3112,20 @@ def primitives_describe(ctx: click.Context, name: str) -> None:
         _json_output(primitive.to_dict())
         return
 
-    table = Table(title=f"Primitive: {primitive.name}", show_lines=True)
+    table = Table(title=f"Primitive: {primitive.name} v{primitive.version}", show_lines=True)
     table.add_column("Field", style="cyan")
     table.add_column("Value")
     table.add_row("Name", primitive.name)
     table.add_row("Version", primitive.version)
     table.add_row("Description", primitive.description)
     table.add_row("Risk Level", primitive.risk_level.value)
+    table.add_row("Latency Class", primitive.latency_class.value if primitive.latency_class else "—")
     table.add_row("Execution Mode", primitive.execution_mode.value)
     table.add_row("Permissions", ", ".join(primitive.permissions))
     table.add_row("Tags", ", ".join(primitive.tags))
+    if primitive.deprecated:
+        note = primitive.deprecation_message or "Use a newer version."
+        table.add_row("Deprecated", f"[yellow]yes — {note}[/yellow]")
     table.add_row("Input Schema", json_lib.dumps(primitive.input_schema, indent=2))
     table.add_row("Output Schema", json_lib.dumps(primitive.output_schema, indent=2))
     console.print(table)

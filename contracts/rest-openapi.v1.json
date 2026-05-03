@@ -1081,8 +1081,22 @@
     },
     "/v1/primitives/": {
       "get": {
-        "description": "List all registered financial action primitives.",
+        "description": "List all registered financial action primitives (latest version of each).",
         "operationId": "list_primitives_v1_primitives__get",
+        "parameters": [
+          {
+            "description": "Include deprecated primitives in results",
+            "in": "query",
+            "name": "include_deprecated",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Include deprecated primitives in results",
+              "title": "Include Deprecated",
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -1095,6 +1109,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "List Primitives",
@@ -1105,7 +1129,7 @@
     },
     "/v1/primitives/{name}": {
       "get": {
-        "description": "Get the descriptor for a single primitive by name.",
+        "description": "Get the descriptor for a single primitive by name and optional version.",
         "operationId": "get_primitive_v1_primitives__name__get",
         "parameters": [
           {
@@ -1114,6 +1138,18 @@
             "required": true,
             "schema": {
               "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Version string or 'latest'",
+            "in": "query",
+            "name": "version",
+            "required": false,
+            "schema": {
+              "default": "latest",
+              "description": "Version string or 'latest'",
+              "title": "Version",
               "type": "string"
             }
           }
@@ -1143,6 +1179,51 @@
           }
         },
         "summary": "Get Primitive",
+        "tags": [
+          "primitives"
+        ]
+      }
+    },
+    "/v1/primitives/{name}/versions": {
+      "get": {
+        "description": "List all registered versions of a named primitive, newest first.",
+        "operationId": "list_primitive_versions_v1_primitives__name__versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Primitive Versions V1 Primitives  Name  Versions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Primitive Versions",
         "tags": [
           "primitives"
         ]

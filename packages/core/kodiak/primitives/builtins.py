@@ -7,7 +7,7 @@ these objects describe the contract those layers expose.
 
 from __future__ import annotations
 
-from kodiak.primitives.base import ExecutionMode, Primitive, RiskLevel, register
+from kodiak.primitives.base import ExecutionMode, LatencyClass, Primitive, RiskLevel, register
 
 # ---------------------------------------------------------------------------
 # get_quote
@@ -46,6 +46,7 @@ get_quote = Primitive(
     risk_level=RiskLevel.READ_ONLY,
     execution_mode=ExecutionMode.SYNC,
     tags=["market_data", "quotes"],
+    latency_class=LatencyClass.REALTIME,
 )
 
 # ---------------------------------------------------------------------------
@@ -93,6 +94,7 @@ place_order = Primitive(
     risk_level=RiskLevel.HIGH,
     execution_mode=ExecutionMode.SYNC,
     tags=["orders", "execution"],
+    latency_class=LatencyClass.FAST,
 )
 
 # ---------------------------------------------------------------------------
@@ -158,6 +160,7 @@ run_backtest = Primitive(
     risk_level=RiskLevel.MEDIUM,
     execution_mode=ExecutionMode.SYNC,
     tags=["backtesting", "research"],
+    latency_class=LatencyClass.BATCH,
 )
 
 # ---------------------------------------------------------------------------

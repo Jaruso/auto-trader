@@ -1072,30 +1072,38 @@ def _with_mcp_audit(fn: Any) -> Any:
 # =============================================================================
 
 
-def list_primitives() -> str:
-    """List all registered financial action primitives.
+def list_primitives(include_deprecated: bool = False) -> str:
+    """List all registered financial action primitives (latest version of each).
 
-    Returns name, version, description, risk level, permissions,
+    Args:
+        include_deprecated: When true, includes deprecated primitive versions
+            in the results. Defaults to false.
+
+    Returns name, version, description, risk level, permissions, latency class,
     and execution mode for each primitive in the registry.
     """
     from kodiak.primitives import list_all  # noqa: PLC0415
 
-    return _ok([p.to_dict() for p in list_all()])
+    primitives = list_all()
+    if not include_deprecated:
+        primitives = [p for p in primitives if not p.deprecated]
+    return _ok([p.to_dict() for p in primitives])
 
 
-def describe_primitive(name: str) -> str:
+def describe_primitive(name: str, version: str = "latest") -> str:
     """Get the full descriptor for a single financial action primitive.
 
     Args:
         name: Primitive name (e.g. "get_quote", "place_order", "run_backtest").
+        version: Semver string (e.g. "1.0.0") or "latest" (default).
     """
     from kodiak.primitives import get  # noqa: PLC0415
 
-    primitive = get(name)
+    primitive = get(name, version=version)
     if primitive is None:
         from kodiak.errors import NotFoundError  # noqa: PLC0415
 
-        return _err(NotFoundError(f"Primitive '{name}' not found."))
+        return _err(NotFoundError(f"Primitive '{name}' version '{version}' not found."))
     return _ok(primitive.to_dict())
 
 
