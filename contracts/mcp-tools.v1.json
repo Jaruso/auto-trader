@@ -1,7 +1,7 @@
 {
   "contract_version": "v1",
   "server": "kodiak",
-  "tool_count": 41,
+  "tool_count": 42,
   "tools": [
     {
       "description": "Analyze realized trade performance (win rate, profit factor, etc.).\n\nArgs:\n    symbol: Filter by ticker. If omitted, analyzes all trades.\n    days: Number of days to look back.\n    limit: Maximum number of trades to analyze.\n",
@@ -1587,6 +1587,50 @@
           "result"
         ],
         "title": "run_optimizationOutput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a multi-step workflow by sequencing registered primitives.\n\nAI selects and sequences primitives; Kodiak executes them deterministically.\nEach step references a registered primitive by name with its input arguments.\nSteps run in order; failure on any step halts the workflow.\n\nArgs:\n    plan_name: Human-readable name for this workflow execution.\n    steps: Ordered list of step descriptors. Each step is a dict with:\n        - primitive (str, required): Registered primitive name.\n        - inputs (dict, optional): Keyword args forwarded to the primitive.\n        - version (str, optional): Semver or \"latest\" (default: \"latest\").\n        - retry_count (int, optional): Extra attempts on transient failure.\n    deterministic: When true, validates all primitives are registered before\n        execution begins (recommended). Default: true.\n\nExample step list::\n\n    [\n        {\"primitive\": \"get_quote\", \"inputs\": {\"symbol\": \"AAPL\"}},\n        {\"primitive\": \"calculate_position_size\",\n         \"inputs\": {\"symbol\": \"AAPL\", \"target_value\": 5000.0},\n         \"retry_count\": 1},\n    ]\n",
+      "inputSchema": {
+        "properties": {
+          "deterministic": {
+            "default": true,
+            "title": "Deterministic",
+            "type": "boolean"
+          },
+          "plan_name": {
+            "title": "Plan Name",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "plan_name",
+          "steps"
+        ],
+        "title": "run_workflowArguments",
+        "type": "object"
+      },
+      "name": "run_workflow",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "run_workflowOutput",
         "type": "object"
       }
     },

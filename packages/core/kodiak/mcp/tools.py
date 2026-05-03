@@ -1068,6 +1068,52 @@ def _with_mcp_audit(fn: Any) -> Any:
 
 
 # =============================================================================
+# Orchestration Tools
+# =============================================================================
+
+
+def run_workflow(
+    plan_name: str,
+    steps: list[dict[str, Any]],
+    deterministic: bool = True,
+) -> str:
+    """Execute a multi-step workflow by sequencing registered primitives.
+
+    AI selects and sequences primitives; Kodiak executes them deterministically.
+    Each step references a registered primitive by name with its input arguments.
+    Steps run in order; failure on any step halts the workflow.
+
+    Args:
+        plan_name: Human-readable name for this workflow execution.
+        steps: Ordered list of step descriptors. Each step is a dict with:
+            - primitive (str, required): Registered primitive name.
+            - inputs (dict, optional): Keyword args forwarded to the primitive.
+            - version (str, optional): Semver or "latest" (default: "latest").
+            - retry_count (int, optional): Extra attempts on transient failure.
+        deterministic: When true, validates all primitives are registered before
+            execution begins (recommended). Default: true.
+
+    Example step list::
+
+        [
+            {"primitive": "get_quote", "inputs": {"symbol": "AAPL"}},
+            {"primitive": "calculate_position_size",
+             "inputs": {"symbol": "AAPL", "target_value": 5000.0},
+             "retry_count": 1},
+        ]
+    """
+    from kodiak.orchestration import WorkflowExecutor, WorkflowPlan, WorkflowStep  # noqa: PLC0415
+
+    plan = WorkflowPlan(
+        name=plan_name,
+        steps=[WorkflowStep.from_dict(s) for s in steps],
+        deterministic=deterministic,
+    )
+    result = WorkflowExecutor().execute(plan)
+    return _ok(result.to_dict())
+
+
+# =============================================================================
 # Primitives Discovery Tools
 # =============================================================================
 
@@ -1160,6 +1206,8 @@ _ALL_TOOLS = [
     # Primitives discovery
     list_primitives,
     describe_primitive,
+    # Orchestration
+    run_workflow,
 ]
 
 

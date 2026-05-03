@@ -391,6 +391,32 @@
         "title": "RebalanceRequest",
         "type": "object"
       },
+      "RunWorkflowRequest": {
+        "properties": {
+          "deterministic": {
+            "default": true,
+            "title": "Deterministic",
+            "type": "boolean"
+          },
+          "plan_name": {
+            "title": "Plan Name",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepRequest"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "plan_name",
+          "steps"
+        ],
+        "title": "RunWorkflowRequest",
+        "type": "object"
+      },
       "StartRequest": {
         "properties": {
           "confirm_execution": {
@@ -410,6 +436,42 @@
           }
         },
         "title": "StartRequest",
+        "type": "object"
+      },
+      "StepRequest": {
+        "properties": {
+          "depends_on": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Depends On",
+            "type": "array"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "title": "Inputs",
+            "type": "object"
+          },
+          "primitive": {
+            "title": "Primitive",
+            "type": "string"
+          },
+          "retry_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Retry Count",
+            "type": "integer"
+          },
+          "version": {
+            "default": "latest",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "primitive"
+        ],
+        "title": "StepRequest",
         "type": "object"
       },
       "StopRequest": {
@@ -1728,6 +1790,50 @@
         "summary": "Resume",
         "tags": [
           "strategies"
+        ]
+      }
+    },
+    "/v1/workflows/run": {
+      "post": {
+        "description": "Execute a workflow plan by sequencing registered primitives.\n\nSteps run in order. If any step fails, execution halts and the response\nincludes the partial results with success=false.",
+        "operationId": "run_workflow_v1_workflows_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunWorkflowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Workflow V1 Workflows Run Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Run Workflow",
+        "tags": [
+          "workflows"
         ]
       }
     }

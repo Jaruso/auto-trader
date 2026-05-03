@@ -37,6 +37,7 @@ from kodiak_server.rest.routes import (
     research,
     safety,
     strategies,
+    workflows,
 )
 
 
@@ -151,6 +152,7 @@ def create_rest_app() -> FastAPI:
     v1.include_router(orders.router, tags=["orders"])
     v1.include_router(safety.router, tags=["safety"])
     v1.include_router(strategies.router, tags=["strategies"])
+    v1.include_router(workflows.router, tags=["workflows"])
 
     # Schema export: GET /api/v1/schema.json returns the OpenAPI spec.
     # Useful for generating typed clients and contract validators.
