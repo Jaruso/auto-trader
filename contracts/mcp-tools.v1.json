@@ -1,7 +1,7 @@
 {
   "contract_version": "v1",
   "server": "kodiak",
-  "tool_count": 39,
+  "tool_count": 41,
   "tools": [
     {
       "description": "Analyze realized trade performance (win rate, profit factor, etc.).\n\nArgs:\n    symbol: Filter by ticker. If omitted, analyzes all trades.\n    days: Number of days to look back.\n    limit: Maximum number of trades to analyze.\n",
@@ -451,6 +451,36 @@
           "result"
         ],
         "title": "describe_indicatorOutput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Get the full descriptor for a single financial action primitive.\n\nArgs:\n    name: Primitive name (e.g. \"get_quote\", \"place_order\", \"run_backtest\").\n",
+      "inputSchema": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "describe_primitiveArguments",
+        "type": "object"
+      },
+      "name": "describe_primitive",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "describe_primitiveOutput",
         "type": "object"
       }
     },
@@ -1066,6 +1096,28 @@
           "result"
         ],
         "title": "list_ordersOutput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "List all registered financial action primitives.\n\nReturns name, version, description, risk level, permissions,\nand execution mode for each primitive in the registry.\n",
+      "inputSchema": {
+        "properties": {},
+        "title": "list_primitivesArguments",
+        "type": "object"
+      },
+      "name": "list_primitives",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_primitivesOutput",
         "type": "object"
       }
     },

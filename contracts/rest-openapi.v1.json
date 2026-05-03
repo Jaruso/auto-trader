@@ -1079,6 +1079,75 @@
         ]
       }
     },
+    "/v1/primitives/": {
+      "get": {
+        "description": "List all registered financial action primitives.",
+        "operationId": "list_primitives_v1_primitives__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Primitives V1 Primitives  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Primitives",
+        "tags": [
+          "primitives"
+        ]
+      }
+    },
+    "/v1/primitives/{name}": {
+      "get": {
+        "description": "Get the descriptor for a single primitive by name.",
+        "operationId": "get_primitive_v1_primitives__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Primitive V1 Primitives  Name  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Primitive",
+        "tags": [
+          "primitives"
+        ]
+      }
+    },
     "/v1/reports/analysis": {
       "post": {
         "description": "Generate a headless analysis report without writing server-side files.",

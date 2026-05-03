@@ -1067,6 +1067,38 @@ def _with_mcp_audit(fn: Any) -> Any:
     return wrapper
 
 
+# =============================================================================
+# Primitives Discovery Tools
+# =============================================================================
+
+
+def list_primitives() -> str:
+    """List all registered financial action primitives.
+
+    Returns name, version, description, risk level, permissions,
+    and execution mode for each primitive in the registry.
+    """
+    from kodiak.primitives import list_all  # noqa: PLC0415
+
+    return _ok([p.to_dict() for p in list_all()])
+
+
+def describe_primitive(name: str) -> str:
+    """Get the full descriptor for a single financial action primitive.
+
+    Args:
+        name: Primitive name (e.g. "get_quote", "place_order", "run_backtest").
+    """
+    from kodiak.primitives import get  # noqa: PLC0415
+
+    primitive = get(name)
+    if primitive is None:
+        from kodiak.errors import NotFoundError  # noqa: PLC0415
+
+        return _err(NotFoundError(f"Primitive '{name}' not found."))
+    return _ok(primitive.to_dict())
+
+
 _ALL_TOOLS = [
     # Engine
     get_status,
@@ -1117,6 +1149,9 @@ _ALL_TOOLS = [
     run_optimization,
     # Safety
     get_safety_status,
+    # Primitives discovery
+    list_primitives,
+    describe_primitive,
 ]
 
 

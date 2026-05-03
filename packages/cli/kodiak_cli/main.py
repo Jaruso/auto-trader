@@ -3015,6 +3015,83 @@ def _display_optimization_result(result) -> None:
 
 
 # =============================================================================
+# Primitives Commands
+# =============================================================================
+
+
+@cli.group()
+def primitives() -> None:
+    """Inspect registered financial action primitives."""
+    pass
+
+
+@primitives.command("list")
+@click.pass_context
+def primitives_list(ctx: click.Context) -> None:
+    """List all registered financial action primitives."""
+    from kodiak.primitives import list_all
+
+    as_json = _get_json_flag(ctx)
+    all_primitives = list_all()
+
+    if as_json:
+        _json_output([p.to_dict() for p in all_primitives])
+        return
+
+    table = Table(title="Financial Action Primitives", show_lines=True)
+    table.add_column("Name", style="cyan")
+    table.add_column("Version")
+    table.add_column("Risk", style="yellow")
+    table.add_column("Mode")
+    table.add_column("Permissions")
+    table.add_column("Tags")
+    for p in all_primitives:
+        table.add_row(
+            p.name,
+            p.version,
+            p.risk_level.value,
+            p.execution_mode.value,
+            ", ".join(p.permissions),
+            ", ".join(p.tags),
+        )
+    console.print(table)
+
+
+@primitives.command("describe")
+@click.argument("name")
+@click.pass_context
+def primitives_describe(ctx: click.Context, name: str) -> None:
+    """Show full descriptor for a primitive including input/output schemas."""
+    import json as json_lib
+
+    from kodiak.primitives import get
+
+    primitive = get(name)
+    if primitive is None:
+        console.print(f"[red]Primitive '{name}' not found.[/red]")
+        raise SystemExit(1)
+
+    as_json = _get_json_flag(ctx)
+    if as_json:
+        _json_output(primitive.to_dict())
+        return
+
+    table = Table(title=f"Primitive: {primitive.name}", show_lines=True)
+    table.add_column("Field", style="cyan")
+    table.add_column("Value")
+    table.add_row("Name", primitive.name)
+    table.add_row("Version", primitive.version)
+    table.add_row("Description", primitive.description)
+    table.add_row("Risk Level", primitive.risk_level.value)
+    table.add_row("Execution Mode", primitive.execution_mode.value)
+    table.add_row("Permissions", ", ".join(primitive.permissions))
+    table.add_row("Tags", ", ".join(primitive.tags))
+    table.add_row("Input Schema", json_lib.dumps(primitive.input_schema, indent=2))
+    table.add_row("Output Schema", json_lib.dumps(primitive.output_schema, indent=2))
+    console.print(table)
+
+
+# =============================================================================
 # MCP Server Commands
 # =============================================================================
 

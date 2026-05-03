@@ -55,7 +55,7 @@ class TestMCPServerSetup:
     def test_tool_count(self) -> None:
         """Should have expected number of MCP tools registered."""
         tools = asyncio.run(mcp.list_tools())
-        assert len(tools) == 39
+        assert len(tools) == 41
 
     def test_all_tools_have_descriptions(self) -> None:
         """Every registered tool should have a non-empty description."""
