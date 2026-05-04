@@ -1508,6 +1508,162 @@
         ]
       }
     },
+    "/v1/sessions/": {
+      "get": {
+        "description": "List execution sessions, most recent first.\n\nSessions are created automatically whenever a workflow is run through\nthe run or run-spec endpoints. Each session records the full plan spec\nand all step outputs, enabling audit and replay.",
+        "operationId": "list_sessions_v1_sessions__get",
+        "parameters": [
+          {
+            "description": "Filter by workflow plan name",
+            "in": "query",
+            "name": "plan_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by workflow plan name",
+              "title": "Plan Name"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Sessions V1 Sessions  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sessions",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}": {
+      "get": {
+        "description": "Get a single execution session by ID.\n\nReturns the full session record including the stored plan spec and\nper-step outputs (primitive name, version, inputs, output, timing).",
+        "operationId": "get_session_v1_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Session V1 Sessions  Session Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Session",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/v1/sessions/{session_id}/replay": {
+      "post": {
+        "description": "Re-execute a stored session's workflow plan.\n\nRetrieves the saved plan from the session and runs it again through\nthe workflow executor. The new execution is persisted as a separate\nsession with its own session_id and timestamps.",
+        "operationId": "replay_session_v1_sessions__session_id__replay_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Replay Session V1 Sessions  Session Id  Replay Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Replay Session",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
     "/v1/strategies/": {
       "get": {
         "description": "List all strategies.",
@@ -1809,7 +1965,7 @@
     },
     "/v1/workflows/run": {
       "post": {
-        "description": "Execute a workflow plan by sequencing registered primitives.\n\nSteps run in order. If any step fails, execution halts and the response\nincludes the partial results with success=false.",
+        "description": "Execute a workflow plan by sequencing registered primitives.\n\nSteps run in order. If any step fails, execution halts and the response\nincludes the partial results with success=false. The execution is\nautomatically persisted as a session (session_id included in response).",
         "operationId": "run_workflow_v1_workflows_run_post",
         "requestBody": {
           "content": {

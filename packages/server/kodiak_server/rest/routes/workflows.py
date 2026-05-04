@@ -33,9 +33,11 @@ def run_workflow(req: RunWorkflowRequest) -> dict[str, Any]:
     """Execute a workflow plan by sequencing registered primitives.
 
     Steps run in order. If any step fails, execution halts and the response
-    includes the partial results with success=false.
+    includes the partial results with success=false. The execution is
+    automatically persisted as a session (session_id included in response).
     """
-    from kodiak.orchestration import WorkflowExecutor, WorkflowPlan, WorkflowStep
+    from kodiak.app.sessions import run_and_save  # noqa: PLC0415
+    from kodiak.orchestration import WorkflowPlan, WorkflowStep  # noqa: PLC0415
 
     plan = WorkflowPlan(
         name=req.plan_name,
@@ -51,8 +53,8 @@ def run_workflow(req: RunWorkflowRequest) -> dict[str, Any]:
         ],
         deterministic=req.deterministic,
     )
-    result = WorkflowExecutor().execute(plan)
-    return result.to_dict()
+    result, session = run_and_save(plan)
+    return {**result.to_dict(), "session_id": session.session_id}
 
 
 @router.post("/validate")
@@ -82,7 +84,7 @@ def run_workflow_spec(req: WorkflowSpecRequest) -> dict[str, Any]:
 
     If validation fails, returns errors without executing.
     """
-    from kodiak.orchestration import WorkflowExecutor, WorkflowSpec, WorkflowSpecError
+    from kodiak.orchestration import WorkflowSpec, WorkflowSpecError  # noqa: PLC0415
 
     try:
         spec = WorkflowSpec.from_yaml(req.spec)
@@ -96,6 +98,8 @@ def run_workflow_spec(req: WorkflowSpecRequest) -> dict[str, Any]:
     if errors:
         return {"valid": False, "errors": errors, "result": None}
 
+    from kodiak.app.sessions import run_and_save  # noqa: PLC0415
+
     plan = spec.compile()
-    result = WorkflowExecutor().execute(plan)
-    return {"valid": True, "errors": [], "result": result.to_dict()}
+    result, session = run_and_save(plan)
+    return {"valid": True, "errors": [], "result": result.to_dict(), "session_id": session.session_id}

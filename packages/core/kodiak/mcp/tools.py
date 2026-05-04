@@ -1102,15 +1102,16 @@ def run_workflow(
              "retry_count": 1},
         ]
     """
-    from kodiak.orchestration import WorkflowExecutor, WorkflowPlan, WorkflowStep  # noqa: PLC0415
+    from kodiak.app.sessions import run_and_save  # noqa: PLC0415
+    from kodiak.orchestration import WorkflowPlan, WorkflowStep  # noqa: PLC0415
 
     plan = WorkflowPlan(
         name=plan_name,
         steps=[WorkflowStep.from_dict(s) for s in steps],
         deterministic=deterministic,
     )
-    result = WorkflowExecutor().execute(plan)
-    return _ok(result.to_dict())
+    result, session = run_and_save(plan)
+    return _ok({**result.to_dict(), "session_id": session.session_id})
 
 
 def validate_workflow_spec(spec: str) -> str:
@@ -1169,7 +1170,7 @@ def run_workflow_spec(spec: str) -> str:
     Args:
         spec: YAML or JSON workflow spec string (same format as validate_workflow_spec).
     """
-    from kodiak.orchestration import WorkflowExecutor, WorkflowSpec, WorkflowSpecError  # noqa: PLC0415
+    from kodiak.orchestration import WorkflowSpec, WorkflowSpecError  # noqa: PLC0415
 
     try:
         workflow_spec = WorkflowSpec.from_yaml(spec)
@@ -1183,9 +1184,11 @@ def run_workflow_spec(spec: str) -> str:
     if errors:
         return _ok({"valid": False, "errors": errors, "result": None})
 
+    from kodiak.app.sessions import run_and_save  # noqa: PLC0415
+
     plan = workflow_spec.compile()
-    result = WorkflowExecutor().execute(plan)
-    return _ok({"valid": True, "errors": [], "result": result.to_dict()})
+    result, session = run_and_save(plan)
+    return _ok({"valid": True, "errors": [], "result": result.to_dict(), "session_id": session.session_id})
 
 
 # =============================================================================
@@ -1226,6 +1229,74 @@ def describe_primitive(name: str, version: str = "latest") -> str:
 
         return _err(NotFoundError(f"Primitive '{name}' version '{version}' not found."))
     return _ok(primitive.to_dict())
+
+
+# =============================================================================
+# Execution Session Tools
+# =============================================================================
+
+
+def list_sessions(plan_name: str = "", limit: int = 50) -> str:
+    """List execution sessions, most recent first.
+
+    Sessions are created automatically when workflows are run. Each session
+    records the full plan spec and all step outputs for audit and replay.
+
+    Args:
+        plan_name: Filter to sessions for a specific workflow plan name.
+            Leave empty (default) to list all sessions.
+        limit: Maximum number of sessions to return (default 50, max 500).
+    """
+    from kodiak.app.sessions import list_sessions_app  # noqa: PLC0415
+
+    sessions = list_sessions_app(
+        plan_name=plan_name or None,
+        limit=max(1, min(limit, 500)),
+    )
+    return _ok(sessions)
+
+
+def get_session(session_id: str) -> str:
+    """Get a single execution session by ID.
+
+    Returns the full session record including the stored plan spec and
+    per-step outputs (primitive name, version, inputs, output, timing).
+
+    Args:
+        session_id: UUID of the session to retrieve.
+    """
+    from kodiak.app.sessions import get_session_app  # noqa: PLC0415
+    from kodiak.errors import NotFoundError  # noqa: PLC0415
+
+    session = get_session_app(session_id)
+    if session is None:
+        return _err(NotFoundError(f"Session '{session_id}' not found."))
+    return _ok(session)
+
+
+def replay_session(session_id: str) -> str:
+    """Re-execute the workflow plan stored in an execution session.
+
+    Retrieves the saved plan from the session and runs it again. The new
+    execution is persisted as a separate session with a new session_id.
+
+    Args:
+        session_id: UUID of the session to replay.
+    """
+    from kodiak.app.sessions import replay_session_app  # noqa: PLC0415
+    from kodiak.errors import NotFoundError  # noqa: PLC0415
+
+    outcome = replay_session_app(session_id)
+    if outcome is None:
+        return _err(NotFoundError(f"Session '{session_id}' not found."))
+    result, new_session = outcome
+    return _ok(
+        {
+            "replayed_from": session_id,
+            "session_id": new_session.session_id,
+            "result": result.to_dict(),
+        }
+    )
 
 
 _ALL_TOOLS = [
@@ -1285,6 +1356,10 @@ _ALL_TOOLS = [
     run_workflow,
     validate_workflow_spec,
     run_workflow_spec,
+    # Execution sessions
+    list_sessions,
+    get_session,
+    replay_session,
 ]
 
 

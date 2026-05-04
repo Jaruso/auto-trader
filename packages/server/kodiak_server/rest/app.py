@@ -36,6 +36,7 @@ from kodiak_server.rest.routes import (
     reports,
     research,
     safety,
+    sessions,
     strategies,
     workflows,
 )
@@ -151,6 +152,7 @@ def create_rest_app() -> FastAPI:
     v1.include_router(research.router, tags=["research"])
     v1.include_router(orders.router, tags=["orders"])
     v1.include_router(safety.router, tags=["safety"])
+    v1.include_router(sessions.router, tags=["sessions"])
     v1.include_router(strategies.router, tags=["strategies"])
     v1.include_router(workflows.router, tags=["workflows"])
 

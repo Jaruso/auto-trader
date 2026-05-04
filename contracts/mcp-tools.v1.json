@@ -1,7 +1,7 @@
 {
   "contract_version": "v1",
   "server": "kodiak",
-  "tool_count": 44,
+  "tool_count": 47,
   "tools": [
     {
       "description": "Analyze realized trade performance (win rate, profit factor, etc.).\n\nArgs:\n    symbol: Filter by ticker. If omitted, analyzes all trades.\n    days: Number of days to look back.\n    limit: Maximum number of trades to analyze.\n",
@@ -886,6 +886,36 @@
       }
     },
     {
+      "description": "Get a single execution session by ID.\n\nReturns the full session record including the stored plan spec and\nper-step outputs (primitive name, version, inputs, output, timing).\n\nArgs:\n    session_id: UUID of the session to retrieve.\n",
+      "inputSchema": {
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "get_sessionArguments",
+        "type": "object"
+      },
+      "name": "get_session",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "get_sessionOutput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Get current Kodiak engine status.\n\nReturns engine running state, environment (paper/prod),\nbroker service, API key configuration, active strategy count,\nand process ID if running. Check the 'hint' field for actionable\nguidance when the engine is not running or misconfigured.\n",
       "inputSchema": {
         "properties": {},
@@ -1155,6 +1185,39 @@
       }
     },
     {
+      "description": "List execution sessions, most recent first.\n\nSessions are created automatically when workflows are run. Each session\nrecords the full plan spec and all step outputs for audit and replay.\n\nArgs:\n    plan_name: Filter to sessions for a specific workflow plan name.\n        Leave empty (default) to list all sessions.\n    limit: Maximum number of sessions to return (default 50, max 500).\n",
+      "inputSchema": {
+        "properties": {
+          "limit": {
+            "default": 50,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "plan_name": {
+            "default": "",
+            "title": "Plan Name",
+            "type": "string"
+          }
+        },
+        "title": "list_sessionsArguments",
+        "type": "object"
+      },
+      "name": "list_sessions",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "list_sessionsOutput",
+        "type": "object"
+      }
+    },
+    {
       "description": "List all configured trading strategies.",
       "inputSchema": {
         "properties": {},
@@ -1283,6 +1346,36 @@
           "result"
         ],
         "title": "remove_strategyOutput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Re-execute the workflow plan stored in an execution session.\n\nRetrieves the saved plan from the session and runs it again. The new\nexecution is persisted as a separate session with a new session_id.\n\nArgs:\n    session_id: UUID of the session to replay.\n",
+      "inputSchema": {
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id"
+        ],
+        "title": "replay_sessionArguments",
+        "type": "object"
+      },
+      "name": "replay_session",
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "replay_sessionOutput",
         "type": "object"
       }
     },

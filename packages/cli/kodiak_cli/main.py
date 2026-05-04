@@ -3249,6 +3249,137 @@ def workflow_run_file(ctx: click.Context, spec_file: str) -> None:
 
 
 # =============================================================================
+# Execution Sessions
+# =============================================================================
+
+
+@cli.group()
+def sessions() -> None:
+    """Query and replay past workflow execution sessions."""
+    pass
+
+
+@sessions.command("list")
+@click.option("--plan", "plan_name", default="", help="Filter by workflow plan name")
+@click.option("--limit", default=20, show_default=True, help="Maximum sessions to show")
+@click.pass_context
+def sessions_list(ctx: click.Context, plan_name: str, limit: int) -> None:
+    """List recent execution sessions, most recent first."""
+    from kodiak.app.sessions import list_sessions_app
+
+    as_json = _get_json_flag(ctx)
+    results = list_sessions_app(plan_name=plan_name or None, limit=limit)
+
+    if as_json:
+        _json_output(results)
+        return
+
+    if not results:
+        console.print("[dim]No sessions found.[/dim]")
+        return
+
+    table = Table(title="Execution Sessions", show_lines=False)
+    table.add_column("Session ID", style="dim", max_width=36)
+    table.add_column("Plan")
+    table.add_column("Status")
+    table.add_column("Steps")
+    table.add_column("Duration (ms)")
+    table.add_column("Started At")
+    for s in results:
+        status = "[green]✓[/green]" if s["success"] else "[red]✗[/red]"
+        table.add_row(
+            s["session_id"],
+            s["plan_name"],
+            status,
+            f"{s['steps_completed']}/{s['steps_total']}",
+            f"{s['total_duration_ms']:.1f}",
+            s["started_at"][:19],
+        )
+    console.print(table)
+
+
+@sessions.command("show")
+@click.argument("session_id")
+@click.pass_context
+def sessions_show(ctx: click.Context, session_id: str) -> None:
+    """Show details of a single execution session."""
+    from kodiak.app.sessions import get_session_app
+
+    as_json = _get_json_flag(ctx)
+    session = get_session_app(session_id)
+
+    if session is None:
+        console.print(f"[red]Session not found:[/red] {session_id}")
+        raise SystemExit(1)
+
+    if as_json:
+        _json_output(session)
+        return
+
+    status = "[green]✓ success[/green]" if session["success"] else "[red]✗ failed[/red]"
+    console.print(f"Session: [cyan]{session['session_id']}[/cyan]")
+    console.print(f"Plan:    {session['plan_name']}")
+    console.print(f"Status:  {status}")
+    console.print(f"Steps:   {session['steps_completed']}/{session['steps_total']}")
+    console.print(f"Duration: {session['total_duration_ms']:.1f} ms")
+    console.print(f"Started:  {session['started_at']}")
+
+    table = Table(title="Step Results", show_lines=True)
+    table.add_column("#", style="dim")
+    table.add_column("Primitive", style="cyan")
+    table.add_column("Version")
+    table.add_column("Status")
+    table.add_column("Attempts")
+    table.add_column("ms")
+    table.add_column("Error")
+    for sr in session.get("step_results", []):
+        ok = "[green]ok[/green]" if sr["success"] else "[red]fail[/red]"
+        table.add_row(
+            str(sr["step_index"]),
+            sr["primitive"],
+            sr["version_resolved"],
+            ok,
+            str(sr["attempts"]),
+            f"{sr['duration_ms']:.1f}",
+            sr.get("error") or "",
+        )
+    console.print(table)
+
+
+@sessions.command("replay")
+@click.argument("session_id")
+@click.pass_context
+def sessions_replay(ctx: click.Context, session_id: str) -> None:
+    """Re-run the workflow plan stored in a session."""
+    from kodiak.app.sessions import replay_session_app
+
+    as_json = _get_json_flag(ctx)
+    outcome = replay_session_app(session_id)
+
+    if outcome is None:
+        console.print(f"[red]Session not found:[/red] {session_id}")
+        raise SystemExit(1)
+
+    result, new_session = outcome
+
+    if as_json:
+        _json_output({
+            "replayed_from": session_id,
+            "session_id": new_session.session_id,
+            "result": result.to_dict(),
+        })
+        return
+
+    status = "[green]✓ success[/green]" if result.success else "[red]✗ failed[/red]"
+    console.print(f"Replayed: [cyan]{session_id}[/cyan]")
+    console.print(f"New session: [cyan]{new_session.session_id}[/cyan]")
+    console.print(f"Result: {status} — {result.steps_completed}/{result.steps_total} steps")
+
+    if not result.success:
+        raise SystemExit(1)
+
+
+# =============================================================================
 # MCP Server Commands
 # =============================================================================
 

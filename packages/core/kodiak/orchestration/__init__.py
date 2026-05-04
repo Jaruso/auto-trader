@@ -35,8 +35,11 @@ from kodiak.orchestration.dsl import WorkflowSpec, WorkflowSpecError
 from kodiak.orchestration.executor import WorkflowExecutor
 from kodiak.orchestration.plan import WorkflowPlan, WorkflowStep
 from kodiak.orchestration.result import StepResult, WorkflowResult
+from kodiak.orchestration.session import ExecutionSession, SessionStore
 
 __all__ = [
+    "ExecutionSession",
+    "SessionStore",
     "StepResult",
     "WorkflowExecutor",
     "WorkflowPlan",
