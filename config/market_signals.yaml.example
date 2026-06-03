@@ -1,0 +1,29 @@
+enabled: true
+poll_interval_seconds: 300
+recent_window_hours: 24
+max_stored_alerts: 500
+
+x:
+  enabled: false
+  headless: true
+  timeout_seconds: 30
+# Primary path: connect X from BearClawWeb Settings → Integrations.
+# Kodiak will store the resulting OAuth tokens and read the authenticated home timeline directly.
+# Optional fallback: if you do not use OAuth, set x.enabled=true and provide user_data_dir for
+# a persisted Playwright profile that is already logged into X.
+#   user_data_dir: /absolute/path/to/playwright-x-profile
+
+sources:
+  - id: x-signaldesk
+    provider: x
+    account: "@signaldesk"
+    label: "Signal Desk"
+    max_posts: 5
+    capture_unmatched: true
+    rules:
+      - id: buy-on-add
+        pattern: "added\\s+\\$(?P<symbol>[A-Z]{1,5})"
+        action: buy
+      - id: sell-on-trim
+        pattern: "trimmed\\s+\\$(?P<symbol>[A-Z]{1,5})"
+        action: sell

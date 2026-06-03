@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, cast
@@ -191,13 +192,11 @@ def get_portfolio_analytics(
     history_symbols = list(dict.fromkeys([*symbols, benchmark_symbol]))
 
     try:
-        history = load_data_for_backtest(
+        history, selected_source, load_attempts = _load_portfolio_history(
+            config=config,
             symbols=history_symbols,
             start_date=history_start,
             end_date=history_end,
-            data_source=config.data.source,
-            data_dir=config.data.csv_dir,
-            config=config,
         )
     except (FileNotFoundError, ValueError) as exc:
         raise AppValidationError(
@@ -207,10 +206,11 @@ def get_portfolio_analytics(
                 "symbols": history_symbols,
                 "benchmark_symbol": benchmark_symbol,
                 "data_source": config.data.source,
+                "load_attempts": getattr(exc, "attempts", []),
                 "reason": str(exc),
             },
             suggestion=(
-                "Provide matching historical data (for example via HISTORICAL_DATA_DIR or Alpaca), "
+                "Provide matching historical data, enable Alpaca market data credentials, "
                 "or pass an end_date that matches the available dataset."
             ),
         )
@@ -223,7 +223,7 @@ def get_portfolio_analytics(
                 trades=trades,
                 price_history=history,
                 benchmark_symbol=benchmark_symbol,
-                data_source=config.data.source,
+                data_source=selected_source,
                 lookback_days=lookback_days,
             )
         else:
@@ -232,7 +232,7 @@ def get_portfolio_analytics(
                 positions=positions,
                 price_history=history,
                 benchmark_symbol=benchmark_symbol,
-                data_source=config.data.source,
+                data_source=selected_source,
                 lookback_days=lookback_days,
             )
     except ValueError as exc:
@@ -242,11 +242,55 @@ def get_portfolio_analytics(
             details={
                 "symbols": history_symbols,
                 "benchmark_symbol": benchmark_symbol,
+                "data_source": selected_source,
+                "load_attempts": load_attempts,
             },
             suggestion="Use a longer dataset or shorten lookback_days so at least two aligned observations remain.",
         )
 
     return PortfolioAnalyticsResponse.from_domain(analytics)
+
+
+def _load_portfolio_history(
+    *,
+    config: Config,
+    symbols: Sequence[str],
+    start_date: datetime,
+    end_date: datetime,
+) -> tuple[dict[str, Any], str, list[dict[str, str]]]:
+    attempts: list[dict[str, str]] = []
+    sources: list[tuple[str, dict[str, Any]]] = [
+        (
+            config.data.source,
+            {
+                "data_dir": config.data.csv_dir if config.data.source.lower() == "csv" else None,
+            },
+        )
+    ]
+
+    if config.data.source.lower() != "alpaca" and config.alpaca_api_key and config.alpaca_secret_key:
+        sources.append(("alpaca", {"data_dir": None}))
+
+    last_error: Exception | None = None
+    for source_name, source_kwargs in sources:
+        try:
+            history = load_data_for_backtest(
+                symbols=list(symbols),
+                start_date=start_date,
+                end_date=end_date,
+                data_source=source_name,
+                data_dir=source_kwargs["data_dir"],
+                config=config,
+            )
+            return history, source_name, attempts
+        except (FileNotFoundError, ValueError) as exc:
+            last_error = exc
+            attempts.append({"source": source_name, "reason": str(exc)})
+
+    if last_error is None:
+        last_error = ValueError("No historical data source candidates were available.")
+    setattr(last_error, "attempts", attempts)
+    raise last_error
 
 
 def calculate_position_size_app(

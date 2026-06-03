@@ -56,6 +56,61 @@
         "title": "AnalysisReportRequest",
         "type": "object"
       },
+      "ConnectXOAuthRequest": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In"
+          },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token"
+          },
+          "scope": {
+            "default": "",
+            "title": "Scope",
+            "type": "string"
+          },
+          "token_type": {
+            "default": "bearer",
+            "title": "Token Type",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "x_user_id": {
+            "title": "X User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "x_user_id",
+          "username",
+          "access_token"
+        ],
+        "title": "ConnectXOAuthRequest",
+        "type": "object"
+      },
       "CreateStrategyRequest": {
         "properties": {
           "qty": {
@@ -169,6 +224,23 @@
           "price"
         ],
         "title": "PlaceOrderRequest",
+        "type": "object"
+      },
+      "PollSignalsRequest": {
+        "properties": {
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          }
+        },
+        "title": "PollSignalsRequest",
         "type": "object"
       },
       "PositionSizingRequest": {
@@ -1661,6 +1733,254 @@
         "summary": "Replay Session",
         "tags": [
           "sessions"
+        ]
+      }
+    },
+    "/v1/signals/alerts": {
+      "get": {
+        "description": "List recent source-driven alerts.",
+        "operationId": "alerts_v1_signals_alerts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "bucket",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Bucket"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Alerts V1 Signals Alerts Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Alerts",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/signals/overview": {
+      "get": {
+        "description": "Summarize signal-monitor state and recent alert volume.",
+        "operationId": "overview_v1_signals_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Overview V1 Signals Overview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Overview",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/signals/poll": {
+      "post": {
+        "description": "Trigger an immediate polling pass.",
+        "operationId": "poll_v1_signals_poll_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PollSignalsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Poll V1 Signals Poll Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Poll",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/signals/sources": {
+      "get": {
+        "description": "List configured sources and runtime status.",
+        "operationId": "sources_v1_signals_sources_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Sources V1 Signals Sources Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sources",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/signals/x/oauth": {
+      "delete": {
+        "description": "Delete stored X OAuth credentials.",
+        "operationId": "disconnect_v1_signals_x_oauth_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Disconnect V1 Signals X Oauth Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Disconnect",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/signals/x/oauth/connect": {
+      "post": {
+        "description": "Persist X OAuth credentials for Kodiak's signal monitor.",
+        "operationId": "connect_v1_signals_x_oauth_connect_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectXOAuthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Connect V1 Signals X Oauth Connect Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Connect",
+        "tags": [
+          "signals"
+        ]
+      }
+    },
+    "/v1/signals/x/oauth/status": {
+      "get": {
+        "description": "Return the non-secret X OAuth connection status.",
+        "operationId": "status_v1_signals_x_oauth_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Status V1 Signals X Oauth Status Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "signals"
         ]
       }
     },

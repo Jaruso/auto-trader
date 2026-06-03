@@ -146,6 +146,72 @@ def test_safety_status_route_exists(client: TestClient, authed: dict) -> None:
     assert r.status_code in (200, 400)
 
 
+def test_signal_overview_route_exists(client: TestClient, authed: dict) -> None:
+    r = client.get("/api/v1/signals/overview", headers=authed)
+    assert r.status_code == 200
+    _assert_envelope(r.json())
+
+
+def test_signal_alerts_route_exists(client: TestClient, authed: dict) -> None:
+    r = client.get("/api/v1/signals/alerts?limit=5", headers=authed)
+    assert r.status_code == 200
+    _assert_envelope(r.json())
+
+
+def test_signal_sources_route_exists(client: TestClient, authed: dict) -> None:
+    r = client.get("/api/v1/signals/sources", headers=authed)
+    assert r.status_code == 200
+    _assert_envelope(r.json())
+
+
+def test_signal_poll_route_exists(client: TestClient, authed: dict) -> None:
+    r = client.post("/api/v1/signals/poll", headers=authed, json={})
+    assert r.status_code in (200, 400)
+    _assert_envelope(r.json())
+
+
+def test_x_oauth_status_route_exists(client: TestClient, authed: dict) -> None:
+    r = client.get("/api/v1/signals/x/oauth/status", headers=authed)
+    assert r.status_code == 200
+    _assert_envelope(r.json())
+
+
+def test_x_oauth_connect_and_disconnect_routes_work(
+    client: TestClient,
+    authed: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("KODIAK_SIGNAL_ENCRYPTION_SECRET", "encryption-secret")
+
+    from kodiak.signals import x_auth as x_auth_module
+    monkeypatch.setattr(x_auth_module, "get_signals_data_dir", lambda data_dir=None: tmp_path)
+
+    connect = client.post(
+        "/api/v1/signals/x/oauth/connect",
+        headers=authed,
+        json={
+            "x_user_id": "42",
+            "username": "signaldesk",
+            "access_token": "access-1",
+            "refresh_token": "refresh-1",
+            "token_type": "bearer",
+            "scope": "tweet.read users.read offline.access",
+            "expires_in": 3600,
+        },
+    )
+    assert connect.status_code == 200
+    _assert_envelope(connect.json())
+
+    status = client.get("/api/v1/signals/x/oauth/status", headers=authed)
+    assert status.status_code == 200
+    _assert_envelope(status.json())
+    assert status.json()["data"]["connected"] is True
+
+    disconnect = client.delete("/api/v1/signals/x/oauth", headers=authed)
+    assert disconnect.status_code == 200
+    _assert_envelope(disconnect.json())
+
 def test_engine_stop_requires_execution_confirmation(
     client: TestClient,
     authed: dict,

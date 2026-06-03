@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import os
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
+import yaml
 
 POSTGRES_AVAILABLE = bool(os.getenv("KODIAK_DATABASE_URL"))
 requires_postgres = pytest.mark.skipif(
@@ -49,6 +51,37 @@ def test_strategy_loader_routes_to_postgres_with_db_url(monkeypatch: pytest.Monk
     assert loader._use_postgres()
 
 
+def test_strategy_loader_falls_back_to_yaml_when_postgres_unreachable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("KODIAK_DATABASE_URL", "postgresql://fake/testdb")
+
+    from kodiak.db import pg_strategy_store
+    from kodiak.strategies import loader
+    from kodiak.strategies.models import Strategy, StrategyType
+
+    strategy = Strategy(
+        symbol="FALLBACK",
+        strategy_type=StrategyType.TRAILING_STOP,
+        quantity=3,
+        trailing_stop_pct=Decimal("5"),
+    )
+    strategies_file = loader.get_strategies_file(tmp_path)
+    strategies_file.write_text(
+        yaml.dump({"strategies": [strategy.to_dict()]}, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    def _boom() -> list[object]:
+        raise ConnectionError("postgres offline")
+
+    monkeypatch.setattr(pg_strategy_store, "load_strategies", _boom)
+
+    loaded = loader.load_strategies(config_dir=tmp_path)
+    assert [item.symbol for item in loaded] == ["FALLBACK"]
+
+
 def test_order_store_routes_to_yaml_without_db_url(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("KODIAK_DATABASE_URL", raising=False)
     import importlib
@@ -67,6 +100,39 @@ def test_order_store_routes_to_postgres_with_db_url(monkeypatch: pytest.MonkeyPa
     importlib.reload(store)
 
     assert store._use_postgres()
+
+
+def test_order_store_falls_back_to_yaml_when_postgres_unreachable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("KODIAK_DATABASE_URL", "postgresql://fake/testdb")
+
+    from kodiak.db import pg_order_store
+    from kodiak.models.order import Order, OrderSide, OrderStatus, OrderType
+    from kodiak.oms import store
+
+    order = Order(
+        id="fallback-order",
+        symbol="AAPL",
+        side=OrderSide.BUY,
+        qty=Decimal("2"),
+        order_type=OrderType.MARKET,
+        status=OrderStatus.NEW,
+    )
+    orders_file = store.get_orders_file(tmp_path)
+    orders_file.write_text(
+        yaml.dump({"orders": [order.to_dict()]}, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    def _boom() -> list[object]:
+        raise ConnectionError("postgres offline")
+
+    monkeypatch.setattr(pg_order_store, "load_orders", _boom)
+
+    loaded = store.load_orders(config_dir=tmp_path)
+    assert [item.id for item in loaded] == ["fallback-order"]
 
 
 # ---------------------------------------------------------------------------

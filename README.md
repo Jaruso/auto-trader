@@ -79,6 +79,9 @@ Kodiak is built around a simple promise: **one trading core, two great interface
 - **Notifications + automation**  
   Send alerts to Discord/webhooks and run via cron (CLI) or async scheduler (server) for continuous operations.
 
+- **Deterministic signal monitoring**  
+  Kodiak Server can poll configured external sources, classify explicit buy/sell language with regex rules, route unmatched items into a `needs_inference` bucket, and expose the resulting alerts over REST for downstream dashboards such as BearClawWeb.
+
 ## 🤖 Using Kodiak
 
 **For human users**: Use the CLI. `kodiak --help` lists all commands.
@@ -101,6 +104,51 @@ Common MCP workflows:
 - `calculate_position_size` / `get_rebalance_plan` — turn target weights, dollar caps, and risk budgets into planning outputs before placing trades
 - `get_fundamentals` / `get_benchmark_history` — pull file-backed company fundamentals and normalized benchmark price history for research workflows
 - `export_analysis_report` — generate JSON or Markdown trade analysis reports, optionally writing them to a local file from the MCP subprocess
+
+For deterministic social-signal monitoring, create `config/market_signals.yaml` from
+[`config/market_signals.yaml.example`](config/market_signals.yaml.example). The primary
+X integration path now uses OAuth 2.0 user-context tokens obtained through
+BearClawWeb's Settings UI, then stored in Kodiak for direct API calls and token refresh.
+Kodiak expects the same X app credentials locally for refresh operations:
+
+```env
+X_CLIENT_ID=<x oauth client id>
+X_CLIENT_SECRET=<x oauth client secret for confidential clients>
+KODIAK_SIGNAL_ENCRYPTION_SECRET=<secret used to encrypt stored X refresh tokens>
+```
+
+With that in place, connect X in BearClawWeb under `Settings → Integrations → X`.
+
+The monitor config still controls which followed-account posts become signals:
+
+```yaml
+enabled: true
+sources:
+  - id: x-signaldesk
+    provider: x
+    account: "@signaldesk"
+    capture_unmatched: true
+    rules:
+      - id: buy-on-add
+        pattern: "added\\s+\\$(?P<symbol>[A-Z]{1,5})"
+        action: buy
+```
+
+With that config in place, Kodiak Server:
+- polls the configured accounts on its background interval
+- reads the authenticated user's X home timeline with OAuth when X is connected
+- emits direct `buy` / `sell` alerts when a regex rule matches
+- stores unmatched posts as `needs_inference` instead of guessing
+- exposes the monitor via `GET /api/v1/signals/overview`, `/alerts`, and `/sources`
+- supports an on-demand poll via `POST /api/v1/signals/poll`
+
+The older Playwright-profile collector remains available as a fallback for local experimentation:
+
+```yaml
+x:
+  enabled: true
+  user_data_dir: /absolute/path/to/playwright-x-profile
+```
 
 `get_portfolio_analytics` accepts `lookback_days`, `benchmark_symbol`, and optional `end_date` (`YYYY-MM-DD`). When trade ledger records exist inside the lookback window, Kodiak reconstructs a transaction-level equity curve from current cash, current positions, trades, and historical closes. It also returns attribution grouped by symbol, rule, and best-effort strategy key derived from `rule_id`; if no ledger trades are available, it falls back to the reproducible current-holdings snapshot replay.
 

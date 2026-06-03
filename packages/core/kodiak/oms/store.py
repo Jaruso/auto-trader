@@ -2,17 +2,47 @@
 
 Routes to the PostgreSQL store when KODIAK_DATABASE_URL is configured,
 otherwise falls back to YAML (config/orders.yaml) for local dev and CI.
+If PostgreSQL is configured but unavailable, Kodiak degrades back to YAML so
+inspection and local state recovery remain available.
 """
+
+from __future__ import annotations
+
 import os
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import yaml
 from kodiak.models.order import Order
+from kodiak.utils.logging import get_logger
+
+_LOGGER = get_logger("kodiak.oms.store")
+_T = TypeVar("_T")
 
 
 def _use_postgres() -> bool:
     """True when KODIAK_DATABASE_URL is set — use the Postgres store."""
     return bool(os.getenv("KODIAK_DATABASE_URL"))
+
+
+def _run_with_postgres_fallback(
+    operation: str,
+    pg_operation: Callable[[], _T],
+    yaml_operation: Callable[[], _T],
+) -> _T:
+    if not _use_postgres():
+        return yaml_operation()
+
+    try:
+        return pg_operation()
+    except Exception as exc:
+        _LOGGER.warning(
+            "PostgreSQL order store unavailable during %s; falling back to YAML: %s",
+            operation,
+            exc,
+        )
+        return yaml_operation()
 
 
 def get_orders_file(config_dir: Path | None = None) -> Path:
@@ -23,22 +53,23 @@ def get_orders_file(config_dir: Path | None = None) -> Path:
     return config_dir / "orders.yaml"
 
 
-def save_orders(orders: list[Order], config_dir: Path | None = None) -> None:
-    """Batch save orders (Postgres if configured, else YAML)."""
-    if _use_postgres():
-        from kodiak.db.pg_order_store import save_orders as _pg
-        return _pg(orders)
+def _save_orders_yaml(orders: list[Order], config_dir: Path | None = None) -> None:
     path = get_orders_file(config_dir)
     data = {"orders": [o.to_dict() for o in orders]}
     with open(path, "w") as f:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
 
-def load_orders(config_dir: Path | None = None) -> list[Order]:
-    """Load orders (Postgres if configured, else YAML)."""
-    if _use_postgres():
-        from kodiak.db.pg_order_store import load_orders as _pg
-        return _pg()
+def save_orders(orders: list[Order], config_dir: Path | None = None) -> None:
+    """Batch save orders (Postgres if configured, else YAML)."""
+    return _run_with_postgres_fallback(
+        "save_orders",
+        lambda: __import__("kodiak.db.pg_order_store", fromlist=["save_orders"]).save_orders(orders),
+        lambda: _save_orders_yaml(orders, config_dir),
+    )
+
+
+def _load_orders_yaml(config_dir: Path | None = None) -> list[Order]:
     path = get_orders_file(config_dir)
     if not path.exists():
         return []
@@ -46,6 +77,15 @@ def load_orders(config_dir: Path | None = None) -> list[Order]:
         data = yaml.safe_load(f) or {}
     items = data.get("orders", [])
     return [Order.from_dict(i) for i in items]
+
+
+def load_orders(config_dir: Path | None = None) -> list[Order]:
+    """Load orders (Postgres if configured, else YAML)."""
+    return _run_with_postgres_fallback(
+        "load_orders",
+        lambda: __import__("kodiak.db.pg_order_store", fromlist=["load_orders"]).load_orders(),
+        lambda: _load_orders_yaml(config_dir),
+    )
 
 
 def _to_local_order(order_obj: object) -> Order:
@@ -99,28 +139,31 @@ def save_order(order_obj: object, config_dir: Path | None = None) -> None:
 
     Accepts either a local `Order` instance or a broker-like Order object.
     """
-    if _use_postgres():
-        from kodiak.db.pg_order_store import save_order as _pg
-        return _pg(order_obj)
+    def _save_yaml() -> None:
+        orders = _load_orders_yaml(config_dir)
+        local = order_obj if isinstance(order_obj, Order) else _to_local_order(order_obj)
 
-    orders = load_orders(config_dir)
-    local = order_obj if isinstance(order_obj, Order) else _to_local_order(order_obj)
+        # Replace existing by id if found
+        replaced = False
+        for i, o in enumerate(orders):
+            # Replace when IDs match, or when external IDs match (broker vs local mapping)
+            if (
+                (o.id and local.id and o.id == local.id)
+                or (o.external_id and local.external_id and o.external_id == local.external_id)
+                or (o.external_id and local.id and o.external_id == local.id)
+                or (o.id and local.external_id and o.id == local.external_id)
+            ):
+                orders[i] = local
+                replaced = True
+                break
 
-    # Replace existing by id if found
-    replaced = False
-    for i, o in enumerate(orders):
-        # Replace when IDs match, or when external IDs match (broker vs local mapping)
-        if (
-            (o.id and local.id and o.id == local.id)
-            or (o.external_id and local.external_id and o.external_id == local.external_id)
-            or (o.external_id and local.id and o.external_id == local.id)
-            or (o.id and local.external_id and o.id == local.external_id)
-        ):
-            orders[i] = local
-            replaced = True
-            break
+        if not replaced:
+            orders.append(local)
 
-    if not replaced:
-        orders.append(local)
+        _save_orders_yaml(orders, config_dir)
 
-    save_orders(orders, config_dir)
+    return _run_with_postgres_fallback(
+        "save_order",
+        lambda: __import__("kodiak.db.pg_order_store", fromlist=["save_order"]).save_order(order_obj),
+        _save_yaml,
+    )

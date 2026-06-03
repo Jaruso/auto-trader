@@ -40,9 +40,11 @@ def create_app() -> Any:
     """Create the combined FastAPI + MCP application."""
     from fastapi import FastAPI, Request
     from fastapi.responses import JSONResponse
+    from kodiak.app.signals import get_signal_monitor_config
     from kodiak.utils.config import load_config
     from kodiak.utils.logging import get_logger, setup_logging
 
+    from kodiak_server.monitoring.signals import SignalMonitor
     from kodiak_server.mcp.server import create_mcp_app
     from kodiak_server.rest.app import create_rest_app
     from kodiak_server.web import create_web_app
@@ -55,14 +57,21 @@ def create_app() -> Any:
         log_format=os.getenv("KODIAK_LOG_FORMAT", "json"),
     )
     logger = get_logger("kodiak_server.main")
+    signal_config = get_signal_monitor_config()
+    signal_monitor = SignalMonitor(signal_config.poll_interval_seconds) if signal_config.enabled else None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:  # noqa: ARG001
         # Startup: apply any pending DB schema migrations.
         _run_migrations()
+        if signal_monitor is not None:
+            await signal_monitor.start()
+            app.state.signal_monitor = signal_monitor
         logger.info("Kodiak server startup complete")
         yield
         # Shutdown: nothing to clean up yet.
+        if signal_monitor is not None:
+            await signal_monitor.stop()
         logger.info("Kodiak server shutdown complete")
 
     app = FastAPI(

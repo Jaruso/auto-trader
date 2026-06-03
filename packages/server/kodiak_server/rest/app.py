@@ -37,6 +37,8 @@ from kodiak_server.rest.routes import (
     research,
     safety,
     sessions,
+    signals,
+    signals_x_oauth,
     strategies,
     workflows,
 )
@@ -153,6 +155,8 @@ def create_rest_app() -> FastAPI:
     v1.include_router(orders.router, tags=["orders"])
     v1.include_router(safety.router, tags=["safety"])
     v1.include_router(sessions.router, tags=["sessions"])
+    v1.include_router(signals.router, tags=["signals"])
+    v1.include_router(signals_x_oauth.router, tags=["signals"])
     v1.include_router(strategies.router, tags=["strategies"])
     v1.include_router(workflows.router, tags=["workflows"])
 

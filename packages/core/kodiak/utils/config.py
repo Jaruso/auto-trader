@@ -144,6 +144,7 @@ def load_config(
     config_parent = get_config_dir().parent
     for candidate in [
         project_root / ".env",
+        project_root.parent / ".env",
         Path.cwd() / ".env",
         config_parent / ".env",
         Path.home() / ".kodiak" / ".env",
